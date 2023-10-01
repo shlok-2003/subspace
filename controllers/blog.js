@@ -1,28 +1,38 @@
 const axios = require('axios');
 const lodash = require('lodash');
 
+const memoizeFunction = lodash.memoize(
+    async() => {
+        try {
+            // getting response from the api
+            const response = await axios
+                .get('https://intent-kit-16.hasura.app/api/rest/blogs', {
+                    headers: {
+                        'x-hasura-admin-secret':
+                            '32qR4KmXOIpsGPQKMqEJHGJS27G5s7HdSKO3gdtQd2kv5e852SiYwWNfxkZOBuQ6',
+                    },
+                })
+                .catch((err) => console.log('Error in getting data:', err));
+            
+            // if no data is found
+            if (!response.data?.blogs) {
+                throw new Error('No blogs found');
+            }
+
+            // getting blogs from the response
+            const blogs = response.data.blogs;
+            return blogs;
+        }
+        catch(err) {
+            throw err;
+        }
+    }
+)
+
 exports.allBlogs = async (req, res) => {
     try {
-        // getting response from the api
-        const response = await axios
-            .get('https://intent-kit-16.hasura.app/api/rest/blogs', {
-                headers: {
-                    'x-hasura-admin-secret':
-                        '32qR4KmXOIpsGPQKMqEJHGJS27G5s7HdSKO3gdtQd2kv5e852SiYwWNfxkZOBuQ6',
-                },
-            })
-            .catch((err) => console.log('Error in getting data:', err));
-        
-        // if no data is found
-        if (!response.data?.blogs) {
-            return res.status(404).json({
-                success: false,
-                message: 'No blogs found',
-            });
-        }
-
-        // getting blogs from the response
-        const blogs = response.data.blogs;
+        // getting response from meoized function
+        const blogs = await memoizeFunction();
 
         // getting all the necessary data
         const blogCount = blogs.length;                                     // total number of blogs
@@ -47,6 +57,13 @@ exports.allBlogs = async (req, res) => {
 
         res.send(ans);
     } catch (err) {
+        if(err.message === 'No blogs found') {
+            return res.status(404).json({
+                success: false,
+                message: 'No blogs found',
+            });
+        }
+
         return res.status(500).json({
             success: false,
             error: err.message,
@@ -60,25 +77,9 @@ exports.searchBlog = async (req, res) => {
         // getting query from the request
         const query = req.params.query;
 
-        const response = await axios
-            .get('https://intent-kit-16.hasura.app/api/rest/blogs', {
-                headers: {
-                    'x-hasura-admin-secret':
-                        '32qR4KmXOIpsGPQKMqEJHGJS27G5s7HdSKO3gdtQd2kv5e852SiYwWNfxkZOBuQ6',
-                },
-            })
-            .catch((err) => console.log('Error in getting data:', err));
-        
-        // if no data is found
-        if (!response.data?.blogs) {
-            return res.status(404).json({
-                success: false,
-                message: 'No blogs found',
-            });
-        }
+        // getting response from memoized function
+        const blogs = await memoizeFunction();
 
-        // getting blogs from the response
-        const blogs = response.data.blogs;
         const searchResult = lodash.filter(blogs, (blogs) => {
             let title = blogs.title.toLowerCase();
             return title.includes(query);
@@ -88,6 +89,13 @@ exports.searchBlog = async (req, res) => {
 
         res.send(ans);
     } catch (err) {
+        if (err.message === 'No blogs found') {
+            return res.status(404).json({
+                success: false,
+                message: 'No blogs found',
+            });
+        }
+
         return res.status(500).json({
             success: false,
             error: err.message,
