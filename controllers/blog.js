@@ -3,6 +3,7 @@ const lodash = require('lodash');
 
 exports.allBlogs = async (req, res) => {
     try {
+        // getting response from the api
         const response = await axios
             .get('https://intent-kit-16.hasura.app/api/rest/blogs', {
                 headers: {
@@ -11,7 +12,8 @@ exports.allBlogs = async (req, res) => {
                 },
             })
             .catch((err) => console.log('Error in getting data:', err));
-
+        
+        // if no data is found
         if (!response.data?.blogs) {
             return res.status(404).json({
                 success: false,
@@ -19,20 +21,23 @@ exports.allBlogs = async (req, res) => {
             });
         }
 
+        // getting blogs from the response
         const blogs = response.data.blogs;
 
-        const blogCount = blogs.length;
-        const blogWithLongestTitle = lodash.maxBy(
+        // getting all the necessary data
+        const blogCount = blogs.length;                                     // total number of blogs
+        const blogWithLongestTitle = lodash.maxBy(                          // blog with longest title
             blogs,
-            (blogs) => blogs.title.length
-        );
-        const privateBlog = lodash.filter(blogs, (blogs) => {
+            (blogs) => blogs.title.length       
+        );      
+        const privateBlog = lodash.filter(blogs, (blogs) => {               // private blogs
             const title = blogs.title.toLowerCase();
 
             return title.includes('privacy');
         });
-        const uniqueBlog = lodash.uniqBy(blogs, (blogs) => blogs.title);
+        const uniqueBlog = lodash.uniqBy(blogs, (blogs) => blogs.title);    // unique blogs
 
+        // creating the response object
         const ans = {
             blogCount,
             blogWithLongestTitle,
@@ -52,6 +57,7 @@ exports.allBlogs = async (req, res) => {
 
 exports.searchBlog = async (req, res) => {
     try {
+        // getting query from the request
         const query = req.params.query;
 
         const response = await axios
@@ -62,7 +68,8 @@ exports.searchBlog = async (req, res) => {
                 },
             })
             .catch((err) => console.log('Error in getting data:', err));
-
+        
+        // if no data is found
         if (!response.data?.blogs) {
             return res.status(404).json({
                 success: false,
@@ -70,12 +77,13 @@ exports.searchBlog = async (req, res) => {
             });
         }
 
+        // getting blogs from the response
         const blogs = response.data.blogs;
-
         const searchResult = lodash.filter(blogs, (blogs) => {
             let title = blogs.title.toLowerCase();
             return title.includes(query);
         });
+    
         const ans = { query, searchResult };
 
         res.send(ans);
